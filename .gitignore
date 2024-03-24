@@ -1,0 +1,4 @@
+.env
+db-data
+pgadmin_data
+*.pyc
