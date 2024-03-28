@@ -1,0 +1,5 @@
+data: 
+  class: File
+  path: HousingData.csv
+target_col: "MEDV"
+training_ratio: 0.8
