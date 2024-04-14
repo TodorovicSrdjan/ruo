@@ -1,0 +1,5 @@
+csv_file: 
+  class: File
+  path: HousingData.csv
+target_col: "MEDV"
+k: 10
