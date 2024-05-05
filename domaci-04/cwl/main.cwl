@@ -47,12 +47,6 @@ steps:
           type: File
           outputSource: train/test_performance
       steps:
-        generate_indexes:
-          in:
-            k: k 
-          out: [indexes]
-          run: idx-gen.cwl
-
         split:
           run: split.cwl
           in:
