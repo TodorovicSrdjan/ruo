@@ -1,0 +1,14 @@
+# Komande
+
+k delete jobs kfold
+k apply -f job.yaml
+k get pods
+
+# Setup
+export FOLDS=10
+k create configmap config --from-literal=k=$FOLDS --from-literal=training_ratio=0.8 --from-literal=target_col=MEDV --from-file=dataset=HousingData.csv -o yaml > config.yaml 
+
+
+# Rezultat
+
+k logs -l job-name=kfold --all-containers 

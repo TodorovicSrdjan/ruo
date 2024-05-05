@@ -1,0 +1,109 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: srdjant
+  name: kfold
+
+spec:
+  completions: 10
+  parallelism: 10
+  completionMode: Indexed 
+  template:
+    spec:
+      initContainers:
+      - name: prep
+        image: tsrdjan/cwl-step-1:wocmd
+        workingDir: /tmp/parts
+        command:
+        - "python"
+        - "/app/fix.py"
+        - "/tmp/configs/dataset"
+        volumeMounts:
+          - name: fold-parts
+            mountPath: /tmp/parts
+          - name: config
+            mountPath: /tmp/configs
+            readOnly: true
+      # - name: split
+      #   image: tsrdjan/cwl-split
+      #   workingDir: /tmp/parts
+      #   command: 
+      #   - 'python -c "print($JOB_COMPLETION_INDEX, $(cat /tmp/configs/k))" >> list.txt'
+      #   restartPolicy: Never
+      #   volumeMounts:
+      #     - name: fold-parts
+      #       mountPath: /tmp/parts
+      
+      #     - name: config
+      #       mountPath: /tmp/configs
+      #       readOnly: true
+      containers:
+      - name: split
+        image: tsrdjan/cwl-split:v2
+        workingDir: /tmp/parts
+        command:
+        - "python"
+        - "/app/split.py"
+        - "cleaned.csv"
+        - "$(JOB_COMPLETION_INDEX)"
+        - "$(FOLD_NUM)"
+        env:
+        - name: FOLD_NUM
+          valueFrom:
+            configMapKeyRef:
+              name: config
+              key: k
+        volumeMounts:
+          - name: fold-parts
+            mountPath: /tmp/parts
+      - name: train
+        image: tsrdjan/cwl-step-2:wocmd
+        workingDir: /tmp/parts
+        env:
+        - name: IDX
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations['batch.kubernetes.io/job-completion-index']
+        - name: PART
+          value: "part_$(IDX).csv"
+        - name: COL
+          valueFrom:
+            configMapKeyRef:
+              name: config
+              key: target_col
+        - name: RATIO
+          valueFrom:
+            configMapKeyRef:
+              name: config
+              key: training_ratio
+        command: ["python", "/app/train.py", "$(PART)", "$(RATIO)", "$(COL)"]
+        volumeMounts:
+          - name: fold-parts
+            mountPath: /tmp/parts
+          - name: config
+            mountPath: /tmp/configs
+            readOnly: true
+      # - name: a
+      #   image: docker.io/library/bash
+      #   workingDir: /tmp/parts
+      #   command: 
+      #   - "bash"
+      #   - "-c"
+      #   - |
+      #     ls -l
+      #   volumeMounts:
+      #     - name: fold-parts
+      #       mountPath: /tmp/parts
+      #     - name: config
+      #       mountPath: /tmp/configs
+      #       readOnly: true
+      # restartPolicy: Never
+      restartPolicy: Never
+      volumes:
+        - name: fold-parts
+          hostPath:
+            path: /home/srdjant/ruo/k8s/domaci-05/temp
+        - name: config 
+          configMap:
+            name: config
